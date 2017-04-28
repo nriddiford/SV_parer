@@ -355,7 +355,7 @@ sub lumpy {
 						
 			# Filter if there are more than 1 control reads
 			if ( $all_control_read_support > 1 ){
-				push @filter_reasons, "precise var with normal read support accross all normal samples=" . $all_control_read_support;
+				push @filter_reasons, "precise var with read support in a normal sample=" . $all_control_read_support;
 			}
 		}
 		
@@ -372,7 +372,7 @@ sub lumpy {
 			# Filter if # tumour reads supporting var is less than 5 * control reads
 			# Or if there are more than 2 control reads
 			if ( $pc_tumour_read_support/$pc_direct_control_read_support < 5 ){
-				push @filter_reasons, 'imprecise var with less than 5 * more tum reads than control=' . "tum:$tumour_read_support cont:$direct_control_read_support";
+				push @filter_reasons, 'imprecise var with less than 5 * more tum reads than control=' . $direct_control_read_support;
 			}
 			if ( $direct_control_read_support > 1 ){
 				push @filter_reasons, 'imprecise var with control read support=' . $direct_control_read_support;
@@ -386,7 +386,7 @@ sub lumpy {
 	# Read depth filters #
 	######################
 			
-	if ( exists $sample_info{$id}{$tumour}{'DP'} and exists $filter_flags{'dp'} ){
+	if ( exists $sample_info{$id}{$tumour}{'DP'} ){
 		
 		my $t_DP =  $sample_info{$id}{$tumour}{'DP'};
 		
@@ -396,29 +396,21 @@ sub lumpy {
 		
 			# Flag if either control or tumour has depth < 10 at site
 		
-			if ( $c_DP <= $filter_flags{'dp'} ){
+			if ( exists $filter_flags{'dp'} and $c_DP <= $filter_flags{'dp'} ){
 				push @filter_reasons, 'control_depth<' . $filter_flags{'dp'} . '=' . $c_DP;
 			}
 		}
 		
-		if ( $t_DP <= $filter_flags{'dp'} ){
+		if ( exists $filter_flags{'dp'} and $t_DP <= $filter_flags{'dp'} ){
 			push @filter_reasons, 'tumour_depth<' . $filter_flags{'dp'} . '=' . $t_DP;
 		}
 	
-	
 		# Subtract control reads from tumour reads
 		# If this number of SU is less than 10% of tumour read_depth then filter
-	    if ( exists $filter_flags{'rdr'} and ( $tumour_read_support - $pc_direct_control_read_support ) / ( $t_DP + 0.01 ) < $filter_flags{'rdr'} ){ # Maybe this is too harsh...
-		
-		# if ( $tumour_read_support / ( $t_DP + 0.01 ) < 0.1 ){ # OLD
+	    if (  $filter_flags{'rdr'} and ( $tumour_read_support - $pc_direct_control_read_support ) / ( $t_DP + 0.01 ) < $filter_flags{'rdr'} ){ # Maybe this is too harsh...
+			push @filter_reasons, 'tumour_reads/tumour_depth<' . ($filter_flags{'rdr'}*100) . "%" . '=' . $tumour_read_support . "/" . $t_DP;
 			
-			# Unless there are both PE and SR supporting variant
-			# unless ($t_PE > 1 and $t_SR > 0){
-				
-				push @filter_reasons, 'tumour_reads/tumour_depth<' . ($filter_flags{'rdr'}*100) . "%" . '=' . $tumour_read_support . "/" . $t_DP;
-			
-			}
-		# }
+		}
 		
 }
 		
