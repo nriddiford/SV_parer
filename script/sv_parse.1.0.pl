@@ -59,11 +59,13 @@ if ( scalar keys %filters > 0 ){
 		say "o Read depth (in both tumor and normal) > 10";
 		say "o Read support / depth > 0.1";
 		say "o SQ quality > 10";
+		say "o Chromsome filter on";
 		
-		%filters = ("su" => 4,
-					"dp" => 10,
-					"rdr" => 0.1,
-					"sq" => 10
+		%filters = ("su"  =>  4,
+					"dp"  =>  10,
+					"rdr" =>  0.1,
+					"sq"  =>  10,
+					"c"	  =>  1 		
 					);
 		$filter = 1;
 					
@@ -74,6 +76,8 @@ if ( scalar keys %filters > 0 ){
 		say "o Read depth (in both tumor and normal) > $filters{'dp'}" if $filters{'dp'};
 		say "o Read support / depth > $filters{'rdr'}" if $filters{'rdr'};
 		say "o SQ quality > $filters{'sq'}" if $filters{'sq'};
+		say "o Chromsome filter on $filters{'c'}" if $filters{'c'};
+		
 		$filter = 1;
 	}
 	else {
@@ -84,6 +88,7 @@ if ( scalar keys %filters > 0 ){
 		say "o Read depth: dp=INT";
 		say "o Read support / depth: rdr=FLOAT";
 		say "o SQ quality: sq=INT";
+		say "o Chromosome: c=BOO";
 		die "Please check filter specification\n";
 	   }
 }
@@ -166,11 +171,5 @@ arguments:
                         -f rdr=FLOAT [supporting reads/tumour depth - a value of 1 would mean all reads support variant]
                         -f sq=INT [phred-scaled variant likelihood]
                         -f, -f a = apply default filters [ -f su=4 -f dp=10 -f rdr=0.1 -f sq=10 ]
-
-Examples:
-o Browse all variants that passed default filters within a speicifc window on X chromosome:
-->  perl script/sv_parse.1.0.pl -v data/HUM-7.tagged.SC.lumpy.gt_all.vcf -f -d -c X:3000000-3500000
-o Filter vars with tumour read support > 5 and SQ score > 20, and write to file in cwd:
-->  perl $0 -v data/HUM-7.tagged.SC.lumpy.gt_all.vcf -f su=5 -f sq=20 -o .
 "
 }
