@@ -166,11 +166,5 @@ arguments:
                         -f rdr=FLOAT [supporting reads/tumour depth - a value of 1 would mean all reads support variant]
                         -f sq=INT [phred-scaled variant likelihood]
                         -f, -f a = apply default filters [ -f su=4 -f dp=10 -f rdr=0.1 -f sq=10 ]
-
-Examples:
-o Browse all variants that passed default filters within a speicifc window on X chromosome:
-->  perl script/sv_parse.1.0.pl -v data/HUM-7.tagged.SC.lumpy.gt_all.vcf -f -d -c X:3000000-3500000
-o Filter vars with tumour read support > 5 and SQ score > 20, and write to file in cwd:
-->  perl $0 -v data/HUM-7.tagged.SC.lumpy.gt_all.vcf -f su=5 -f sq=20 -o .
 "
 }
