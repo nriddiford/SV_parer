@@ -59,6 +59,7 @@ if ( scalar keys %filters > 0 ){
 		say "o Read depth (in both tumor and normal) > 10";
 		say "o Read support / depth > 0.1";
 		say "o SQ quality > 10";
+		say "o Chromsome filter on";
 		
 		%filters = ("su"  =>  4,
 					"dp"  =>  10,
@@ -75,7 +76,7 @@ if ( scalar keys %filters > 0 ){
 		say "o Read depth (in both tumor and normal) > $filters{'dp'}" if $filters{'dp'};
 		say "o Read support / depth > $filters{'rdr'}" if $filters{'rdr'};
 		say "o SQ quality > $filters{'sq'}" if $filters{'sq'};
-		say "o Chromsome filter on > $filters{'c'}" if $filters{'c'};
+		say "o Chromsome filter on $filters{'c'}" if $filters{'c'};
 		
 		$filter = 1;
 	}
