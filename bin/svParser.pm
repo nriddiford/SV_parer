@@ -219,7 +219,7 @@ sub parse {
       $call_lookup{$lookup_id} = $id;
     }
   }
-  return (\%SVs, \%info, \%filtered_SVs, \%call_lookup, $type);
+  return (\%SVs, \%info, \%filtered_SVs, \%call_lookup);
 }
 
 
@@ -459,7 +459,9 @@ sub novobreak {
   ######################
   # Read depth filters #
   ######################
+
   my ($c_DP_1, $c_DP_2) = @info[11,21];
+
   my $c_DP = ($c_DP_1 + $c_DP_2)/2;
   my $t_DP = ($t_DP_1 + $t_DP_2)/2;
 
@@ -935,12 +937,9 @@ sub dump_variants {
 sub print_variants {
 
   my ( $SVs, $filtered_SVs, $name, $output_dir, $germline ) = @_;
-  my $outfile =  $name . ".filtered.vcf";
-  my $outpath = File::Spec->catdir( $output_dir, $outfile );
-  open my $out, '>', $outpath or die $!;
 
-  # open my $out, '>', $output_dir . $name . ".filtered.vcf" or die $!;
-  say "Writing output to '$outpath'";
+  open my $out, '>', $output_dir . $name . ".filtered.vcf" or die $!;
+  say "Writing output to " . "'$output_dir" . $name . ".filtered.vcf'";
 
   my %filtered_SVs = %{ $filtered_SVs };
   my $sv_count = 0;
@@ -962,21 +961,26 @@ sub print_variants {
 
 
 sub write_summary {
-  my ( $SVs, $name, $summary_out, $type) = @_;
-  my $outfile =  $name . ".filtered.summary.txt";
-  my $outpath = File::Spec->catdir( $summary_out, $outfile );
+  my ( $SVs, $name, $summary_out, $type, $germline ) = @_;
 
-  open my $info_file, '>', $outpath or die $!;
-  say "Writing useful info to " . "'$outpath'";
+  my $info_file;
 
-  # $type = "lumpy" if $type eq 'l';
-  # $type = "delly" if $type eq 'd';
-  # $type = "novobreak" if $type eq 'n';
+  if ($germline){
+    open $info_file, '>', $summary_out . $name . ".germline_filtered.summary.txt" or die $!;
+    say "Writing useful info to " . "'$summary_out" . $name . ".germline_filtered.summary.txt'";
+  }
+  else{
+    open $info_file, '>', $summary_out . $name . ".filtered.summary.txt" or die $!;
+    say "Writing useful info to " . "'$summary_out" . $name . ".filtered.summary.txt'";
+  }
+
+  $type = "lumpy" if $type eq 'l';
+  $type = "delly" if $type eq 'd';
+  $type = "novobreak" if $type eq 'n';
 
   my %connected_bps;
 
-  my @header = qw/ source type chromosome1 bp1 chromosome2 bp2 split_reads disc_reads genotype id length(Kb) position consensus microhomology configuration allele_frequency log2(cnv) /;
-  print $info_file join("\t", @header) . "\n";
+  print $info_file join("\t", "source", "type", "chromosome1", "bp1", "chromosome2", "bp2", "split_reads", "disc_reads", 'genotype', "id", "length(Kb)", "position", "consensus|type", "microhomology", "configuration", "allele_frequency", "mechanism|log2(cnv)") . "\n";
 
   for ( sort { @{ $SVs->{$a}}[0] cmp @{ $SVs->{$b}}[0] or
         @{ $SVs->{$a}}[1] <=> @{ $SVs->{$b}}[1]
