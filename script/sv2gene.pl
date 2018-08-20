@@ -7,7 +7,9 @@ use Data::Dumper;
 use Data::Printer;
 
 use feature qw/ say /;
+
 use FindBin '$Script';
+
 use Getopt::Long qw/ GetOptions /;
 
 my $sv_calls;
@@ -16,13 +18,9 @@ my $features;
 my $reannotate;
 my $blacklist;
 my $whitelist;
-my $somatic = 0;
-my $mark = 0;
 
 GetOptions( 'infile=s'         =>    \$sv_calls,
             'features=s'       =>    \$features,
-            'somatic'          =>    \$somatic,
-            'mark'             =>    \$mark,
             're-annotate'      =>    \$reannotate,
             'blacklist=s'      =>    \$blacklist,
             'whitelist=s'      =>    \$whitelist,
@@ -34,13 +32,6 @@ if ($help) { exit usage() }
 
 if (not $sv_calls and not $features ){
   exit usage();
-}
-
-if($somatic){
-  say "Running in somatic mode - will annotate all germline events as 'NA'";
-}
-if($mark){
-  say "Running in mark mode. Somatic dels and dups with abs(log2(FC) < 0.26) will be marked as F in T/F column";
 }
 
 my (%false_positives, %true_positives);
@@ -72,21 +63,26 @@ my (%transcript_length, %genes, %features);
 my ($sample, $annotated_svs, $genes_out, $bp_out);
 
 make_gene_hash($features);
+
 annotate_SVs($sv_calls);
 
 sub make_gene_hash {
   my $bed_file = shift;
+
   open my $bed_in, '<', $bed_file;
   my %exons;
+
   while(<$bed_in>){
     chomp;
     my ($chrom, $feature, $start, $stop, $id, $gene) = (split)[0,2,3,4,9,11];
     ($gene) = $gene =~ /\"(.*)\";/;
     $gene =~ s/\"//g;
     ($id) = $id =~ /\"(.*)\";/;
+
     if ($feature eq 'gene'){
       $genes{$chrom}{$gene} = [$start, $stop, $id];
     }
+
     else {
       my $transcript = (split)[13];
       ($transcript) = $transcript =~ /\"(.*)\";/;
@@ -104,7 +100,9 @@ sub make_gene_hash {
 
 sub annotate_SVs {
   my $in = shift;
+
   open my $SV_in, '<', $in;
+
   my ( $name, $extention ) = split(/\.([^.]+)$/, basename($in), 2);
   ($sample) = split(/_/, $name, 3);
 
@@ -132,6 +130,7 @@ sub annotate_SVs {
   for (@lines){
     chomp;
     my @cells = split(/\t/);
+
     if (/event/){
       if ($reannotate){
         print $annotated_svs "$_\n";
@@ -142,20 +141,18 @@ sub annotate_SVs {
         next;
       }
     }
-    my ($event, $source, $type, $chrom1, $bp1, $chrom2, $bp2, $sr, $pe, $genotype, undef, $length, undef, undef, undef, undef, $af, $cnv) = @cells[0..17];
+
+    my ($event, $source, $type, $chrom1, $bp1, $chrom2, $bp2, undef, undef, $genotype, undef, $length, undef, undef, undef, undef, $af, $mech) = @cells[0..17];
     # Check to see if the SV has already been annotated - print and skip if next
-
-    if ($genotype =~ 'germline' and $somatic){
-      print $annotated_svs join("\t", $_, "NA", "NA", "-", "", "") . "\n" if not $reannotate;
-      print $annotated_svs "$_\n" if $reannotate;
-      next;
-    }
     if ( $cells[18] and $cells[18] ne ' ' and $cells[18] ne '-' and $reannotate ){
-      print $annotated_svs "$_\n";
-      next if $events{$sample}{$event}++;
-      my ($bp1_locus, $bp2_locus, $affected_genes, undef, undef) = @cells[18..22];
-      my @genes;
 
+      print $annotated_svs "$_\n";
+
+      next if $events{$sample}{$event}++;
+
+      my ($bp1_locus, $bp2_locus, $affected_genes, undef, undef) = @cells[18..22];
+
+      my @genes;
       if ($affected_genes =~ /\,/){
         push @genes, split(', ', $affected_genes);
       }
@@ -178,9 +175,12 @@ sub annotate_SVs {
         my ($bp2_gene, $bp2_feature) = split(", ", $bp2_locus);
         $bp2_feature = 'intergenic' if not length $bp2_feature;
 
-        print $bp_out join("\t", $event, $bptype, $sample, $genotype, $chrom1, $bp1, $bp1_gene, $bp1_feature, $chrom2, $bp2, $bp2_gene, $bp2_feature, $type, $length, $af) . "\n" if $bptype eq 'bp1';
-        print $bp_out join("\t", $event, $bptype, $sample, $genotype, $chrom2, $bp2, $bp2_gene, $bp2_feature, $chrom1, $bp1, $bp1_gene, $bp1_feature, $type, $length, $af) . "\n" if $bptype eq 'bp2';
+        # print join("\t", $bp1_gene, $bp1_feature, $bp2_gene, $bp2_feature) . "\n";
+
+        print $bp_out join("\t", $event, $bptype, $sample, $genotype, $chrom1, $bp1, $bp1_gene, $bp1_feature, $chrom2, $bp2, $bp2_gene, $bp2_feature, $type, $length) . "\n" if $bptype eq 'bp1';
+        print $bp_out join("\t", $event, $bptype, $sample, $genotype, $chrom2, $bp2, $bp2_gene, $bp2_feature, $chrom1, $bp1, $bp1_gene, $bp1_feature, $type, $length) . "\n" if $bptype eq 'bp2';
       }
+
       next;
     }
 
@@ -223,6 +223,7 @@ sub annotate_SVs {
       print $bp_out join("\t", $event, $bptype, $sample, $genotype, $chrom2, $bp2, $bp2_gene, $bp2_feature, $chrom1, $bp1, $bp1_gene, $bp1_feature, $type, $length) . "\n" if $bptype eq 'bp2';
     }
 
+
     my $affected_genes = scalar @hit_genes;
     my $joined_genes = join(", ", @hit_genes);
 
@@ -249,34 +250,35 @@ sub annotate_SVs {
 
     my $blacklookup = join("_", $sample, $chrom1, $bp1, $chrom2, $bp2);
 
-    if ($whitelist and exists $true_positives{$whitelookup}){
-      say "* Annotating call from whitelist: $whitelookup";
-      my @cols = @{$true_positives{$whitelookup}};
-      print $annotated_svs join("\t", $event, @cols[1..$#cols]) . "\n";
-      $call++;
-      next;
-    }
-
-    if ($mark) {
-      # If called by a CN approach then mark as FP unless > log2(1.5)
-      if ( (abs($cnv) < 0.58) and $sr eq '-' and $pe eq '-' ){
-        print $annotated_svs join("\t", $_, $hit_bp1, $hit_bp2, $joined_genes2print, "F", "Low FC in $type called by CN") . "\n";
+    if ($blacklist){
+      if (exists $false_positives{$blacklookup}){
+        say "* Marking blacklisted call as FP: $blacklookup";
+        print $annotated_svs join("\t", $_, $hit_bp1, $hit_bp2, $joined_genes2print, "F") . "\n";
         $call++;
         next;
       }
-      # Unless there's read support, in which case only mark if < log2(1.2)
-      elsif ( (abs($cnv) < 0.26) and ($type eq 'DEL' or $type eq 'DUP') and $length > 1 ) {
-        print $annotated_svs join("\t", $_, $hit_bp1, $hit_bp2, $joined_genes2print, "F", "Low FC in $type") . "\n";
-        $call++;
-        next;
-      }
+      # else {
+      #   unless($whitelist and exists $true_positives{$whitelookup}){
+      #     print $annotated_svs join("\t", $_, $hit_bp1, $hit_bp2, $joined_genes2print, " ") . "\n";
+      #     $call++;
+      #     next;
+      #   }
+      # }
     }
 
-    if ($blacklist and exists $false_positives{$blacklookup}){
-      say "* Marking blacklisted call as FP: $blacklookup";
-      print $annotated_svs join("\t", $_, $hit_bp1, $hit_bp2, $joined_genes2print, "F") . "\n";
-      $call++;
-      next;
+    if ($whitelist){
+      if (exists $true_positives{$whitelookup}){
+        say "* Annotating call from whitelist: $whitelookup";
+        my @cols = @{$true_positives{$whitelookup}};
+        print $annotated_svs join("\t", $event, @cols[1..$#cols]) . "\n";
+        $call++;
+      }
+      else {
+        unless($blacklist and exists $false_positives{$blacklookup}){
+          print $annotated_svs join("\t", $_, $hit_bp1, $hit_bp2, $joined_genes2print, " ") . "\n";
+          $call++;
+        }
+      }
     }
 
     else {
@@ -366,7 +368,7 @@ sub getbps {
 sub usage {
   print
 "
-usage: $Script -i variants -f features.gtf -b blacklist -w whitelist
+usage: $Script [-h] [-i INFILE] [-f FEATURES]
 
 sv2gene
 author: Nick Riddiford (nick.riddiford\@curie.fr)
@@ -375,11 +377,9 @@ description: Annotate breakpoints of structural variants in svParser summary fil
 
 arguments:
   -h, --help            show this help message and exit
-  -i, --infile          variant calls file (as produced by svParser)[required]
-  -f, --features        features file to annotate from (must be in .gtf format)
-  -s, --somatic         switch on somatic mode - only annotate somatic events
-  -r, --reannotate      run in re-annotate mode and
-  -b, --blacklist       specify blacklist to exclude variants
-  -w, --whitelist       specify whitelist to proect variants
+  -i INFILE, --infile
+                        SV calls file (as produced by svParser)[required]
+  -f FEATURES --features
+                        Features file to annotate from (must be in .gtf format)
 "
 }
